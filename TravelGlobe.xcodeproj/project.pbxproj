@@ -41,8 +41,8 @@
 		3746428D2EE1D7AF00D28E25 = {
 			isa = PBXGroup;
 			children = (
-				374642982EE1D7AF00D28E25 /* TravelGlobe */,
 				374642972EE1D7AF00D28E25 /* Products */,
+				374642982EE1D7AF00D28E25 /* TravelGlobe */,
 			);
 			sourceTree = "<group>";
 		};
