@@ -1,32 +1,22 @@
-//
-//  TravelGlobeApp.swift
-//  TravelGlobe
-//
-//  Created by Qusai Ketah on 2025-12-04.
-//
-
 import SwiftUI
-import SwiftData
+import FirebaseCore
+
+class AppDelegate: NSObject, UIApplicationDelegate {
+  func application(_ application: UIApplication,
+                   didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
+    FirebaseApp.configure()
+    print("🔥 Firebase Configured Successfully!")
+    return true
+  }
+}
 
 @main
 struct TravelGlobeApp: App {
-    var sharedModelContainer: ModelContainer = {
-        let schema = Schema([
-            Item.self,
-        ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
-
-        do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
-        } catch {
-            fatalError("Could not create ModelContainer: \(error)")
-        }
-    }()
-
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
+    
     var body: some Scene {
         WindowGroup {
             ContentView()
         }
-        .modelContainer(sharedModelContainer)
     }
 }

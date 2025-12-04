@@ -6,6 +6,12 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		374642BD2EE1E1EC00D28E25 /* AWSS3 in Frameworks */ = {isa = PBXBuildFile; productRef = 374642BC2EE1E1EC00D28E25 /* AWSS3 */; };
+		374642C02EE1E23900D28E25 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 374642BF2EE1E23900D28E25 /* FirebaseAuth */; };
+		374642C22EE1E23900D28E25 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 374642C12EE1E23900D28E25 /* FirebaseFirestore */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		374642962EE1D7AF00D28E25 /* TravelGlobe.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TravelGlobe.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -23,6 +29,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				374642BD2EE1E1EC00D28E25 /* AWSS3 in Frameworks */,
+				374642C02EE1E23900D28E25 /* FirebaseAuth in Frameworks */,
+				374642C22EE1E23900D28E25 /* FirebaseFirestore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -65,6 +74,9 @@
 			);
 			name = TravelGlobe;
 			packageProductDependencies = (
+				374642BC2EE1E1EC00D28E25 /* AWSS3 */,
+				374642BF2EE1E23900D28E25 /* FirebaseAuth */,
+				374642C12EE1E23900D28E25 /* FirebaseFirestore */,
 			);
 			productName = TravelGlobe;
 			productReference = 374642962EE1D7AF00D28E25 /* TravelGlobe.app */;
@@ -94,6 +106,10 @@
 			);
 			mainGroup = 3746428D2EE1D7AF00D28E25;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				374642BB2EE1E1EC00D28E25 /* XCRemoteSwiftPackageReference "aws-sdk-ios-spm" */,
+				374642BE2EE1E23900D28E25 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 374642972EE1D7AF00D28E25 /* Products */;
 			projectDirPath = "";
@@ -328,6 +344,43 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		374642BB2EE1E1EC00D28E25 /* XCRemoteSwiftPackageReference "aws-sdk-ios-spm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/aws-amplify/aws-sdk-ios-spm";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.41.0;
+			};
+		};
+		374642BE2EE1E23900D28E25 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.6.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		374642BC2EE1E1EC00D28E25 /* AWSS3 */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 374642BB2EE1E1EC00D28E25 /* XCRemoteSwiftPackageReference "aws-sdk-ios-spm" */;
+			productName = AWSS3;
+		};
+		374642BF2EE1E23900D28E25 /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 374642BE2EE1E23900D28E25 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		374642C12EE1E23900D28E25 /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 374642BE2EE1E23900D28E25 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 3746428E2EE1D7AF00D28E25 /* Project object */;
 }
