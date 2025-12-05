@@ -1,55 +1,94 @@
-//
-//  ContentView.swift
-//  TravelGlobe
-//
-//  Created by Qusai Ketah on 2025-12-04.
-//
-
 import SwiftUI
-import SwiftData
 
 struct ContentView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Query private var items: [Item]
-
+    @StateObject var auth = AuthService.shared
+    
+    // State to control the sidebar
+    @State private var showMenu = false
+    @State private var showNewTrip = false
+    
+    // Temporary state to simulate profile completion
+    @State private var hasProfile = false
+    
     var body: some View {
-        NavigationSplitView {
-            List {
-                ForEach(items) { item in
-                    NavigationLink {
-                        Text("Item at \(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))")
-                    } label: {
-                        Text(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))
+        ZStack {
+            // 1. Routing Logic
+            if auth.userSession == nil {
+                LoginView()
+            } else if !hasProfile {
+                ProfileSetupView()
+                    .onTapGesture { hasProfile = true }
+            } else {
+                // 2. MAIN APP
+                ZStack {
+                    // A. The 3D Map (Placeholder)
+                    Color.black.ignoresSafeArea()
+                    VStack {
+                        Spacer()
+                        Image(systemName: "globe.europe.africa.fill")
+                            .resizable().scaledToFit().frame(width: 300)
+                            .foregroundColor(.blue.opacity(0.2))
+                            .blur(radius: 10)
+                        Spacer()
+                    }
+                    
+                    // B. Floating Controls
+                    VStack {
+                        // --- TOP ROW ---
+                        HStack {
+                            // 🟢 OPEN MENU BUTTON (Arrow Right)
+                            Button(action: {
+                                withAnimation(.spring()) { showMenu = true }
+                            }) {
+                                Image(systemName: "arrow.right") // The Icon you wanted
+                                    .font(.title2)
+                                    .bold()
+                                    .foregroundColor(.white)
+                                    .frame(width: 50, height: 50)
+                                    .background(.ultraThinMaterial) // Glass Effect
+                                    .clipShape(Circle())
+                                    .overlay(
+                                        Circle().stroke(Color.white.opacity(0.2), lineWidth: 1)
+                                    )
+                                    .shadow(color: .black.opacity(0.3), radius: 10)
+                            }
+                            
+                            Spacer()
+                        }
+                        .padding(.top, 60)
+                        .padding(.leading, 20)
+                        
+                        Spacer()
+                        
+                        // --- BOTTOM ROW ---
+                        Button(action: { showNewTrip = true }) {
+                            HStack {
+                                Image(systemName: "plus")
+                                Text("New Trip")
+                            }
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .padding(.vertical, 16)
+                            .padding(.horizontal, 24)
+                            .background(Color.blue)
+                            .cornerRadius(30)
+                            .shadow(color: .blue.opacity(0.5), radius: 20)
+                        }
+                        .padding(.bottom, 20)
+                    }
+                    
+                    // C. The Sidebar Overlay
+                    if showMenu {
+                        SidebarView(isOpen: $showMenu)
+                            .transition(.move(edge: .leading))
+                            .zIndex(10)
                     }
                 }
-                .onDelete(perform: deleteItems)
-            }
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    EditButton()
+                .sheet(isPresented: $showNewTrip) {
+                    NewTripSheet()
+                        .presentationDetents([.fraction(0.6)])
+                        .presentationDragIndicator(.visible)
                 }
-                ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
-                    }
-                }
-            }
-        } detail: {
-            Text("Select an item")
-        }
-    }
-
-    private func addItem() {
-        withAnimation {
-            let newItem = Item(timestamp: Date())
-            modelContext.insert(newItem)
-        }
-    }
-
-    private func deleteItems(offsets: IndexSet) {
-        withAnimation {
-            for index in offsets {
-                modelContext.delete(items[index])
             }
         }
     }
@@ -57,5 +96,4 @@ struct ContentView: View {
 
 #Preview {
     ContentView()
-        .modelContainer(for: Item.self, inMemory: true)
 }
