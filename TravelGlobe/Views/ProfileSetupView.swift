@@ -1,6 +1,9 @@
 import SwiftUI
 
 struct ProfileSetupView: View {
+
+    @Binding var isComplete: Bool
+    
     @State private var username: String = ""
     @State private var age: Int = 18
     
@@ -42,8 +45,8 @@ struct ProfileSetupView: View {
                             .padding(.leading, 4)
                         
                         TextField("Enter your username", text: $username)
-                            .padding(.horizontal) // Only side padding
-                            .frame(height: 55)    // 👈 FIXED HEIGHT
+                            .padding(.horizontal)
+                            .frame(height: 55)
                             .background(Color.white.opacity(0.05))
                             .cornerRadius(12)
                             .overlay(
@@ -72,7 +75,7 @@ struct ProfileSetupView: View {
                                 Button(action: { if age > 13 { age -= 1 } }) {
                                     Rectangle()
                                         .fill(Color.clear)
-                                        .frame(width: 50, height: 55) // Big touch target
+                                        .frame(width: 50, height: 55)
                                         .overlay(Image(systemName: "minus").foregroundColor(.gray))
                                 }
                                 
@@ -83,7 +86,7 @@ struct ProfileSetupView: View {
                                 Button(action: { if age < 100 { age += 1 } }) {
                                     Rectangle()
                                         .fill(Color.clear)
-                                        .frame(width: 50, height: 55) // Big touch target
+                                        .frame(width: 50, height: 55)
                                         .overlay(Image(systemName: "plus").foregroundColor(.white))
                                 }
                             }
@@ -98,9 +101,11 @@ struct ProfileSetupView: View {
                     }
                 }
                 
-
                 Button(action: {
                     print("Start: \(username), Age: \(age)")
+                    withAnimation {
+                        isComplete = true
+                    }
                 }) {
                     Text("Start Exploring")
                         .font(.headline)
@@ -122,5 +127,5 @@ struct ProfileSetupView: View {
 }
 
 #Preview {
-    ProfileSetupView()
+    ProfileSetupView(isComplete: .constant(false))
 }

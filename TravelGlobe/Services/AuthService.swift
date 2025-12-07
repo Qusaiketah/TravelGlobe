@@ -13,6 +13,8 @@ import Combine
 class AuthService: ObservableObject {
 
     @Published var userSession: FirebaseAuth.User?
+    
+    @Published var isMockLoggedIn = false
 
     static let shared = AuthService()
     
@@ -20,15 +22,25 @@ class AuthService: ObservableObject {
         self.userSession = Auth.auth().currentUser
     }
     
-    // I will fill this with real Google/Apple logic later
+    func signInMock() {
+        print("AuthService: Fake signing in...")
+        withAnimation {
+            self.isMockLoggedIn = true
+        }
+    }
+    
     func signInWithGoogle() {
         print("AuthService: Starting Google Sign In...")
+        signInMock()
     }
     
     func signOut() {
         do {
             try Auth.auth().signOut()
             self.userSession = nil
+            withAnimation {
+                self.isMockLoggedIn = false
+            }
             print("AuthService: Signed out successfully")
         } catch {
             print("AuthService: Error signing out: \(error.localizedDescription)")

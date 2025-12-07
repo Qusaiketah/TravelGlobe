@@ -10,13 +10,11 @@ import SwiftUI
 struct LoginView: View {
     var body: some View {
         ZStack {
-            // 1. OLED Black Background
             Color.black.ignoresSafeArea()
             
             VStack(spacing: 30) {
                 Spacer()
                 
-                // 2. Hero Image (Globe Icon)
                 ZStack {
                     Circle()
                         .fill(Color.blue.opacity(0.2))
@@ -31,7 +29,6 @@ struct LoginView: View {
                         .shadow(color: .blue, radius: 20)
                 }
                 
-                // 3. Typography
                 VStack(spacing: 10) {
                     Text("TravelGlobe")
                         .font(.system(size: 42, weight: .bold, design: .serif))
@@ -43,10 +40,10 @@ struct LoginView: View {
                 }
                 .padding(.bottom, 40)
                 
-                // 4. Buttons
                 VStack(spacing: 15) {
-                    // Google Button
-                    Button(action: { print("Login with Google") }) {
+                    Button(action: {
+                        AuthService.shared.signInMock()
+                    }) {
                         HStack {
                             Image(systemName: "g.circle.fill")
                             Text("Sign in with Google")
@@ -59,8 +56,9 @@ struct LoginView: View {
                         .cornerRadius(15)
                     }
                     
-                    // Apple Button
-                    Button(action: { print("Login with Apple") }) {
+                    Button(action: {
+                        AuthService.shared.signInMock()
+                    }) {
                         HStack {
                             Image(systemName: "apple.logo")
                             Text("Sign in with Apple")
@@ -69,7 +67,7 @@ struct LoginView: View {
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
                         .frame(height: 55)
-                        .background(.ultraThinMaterial) // Glass Effect
+                        .background(.ultraThinMaterial)
                         .cornerRadius(15)
                         .overlay(
                             RoundedRectangle(cornerRadius: 15)
@@ -88,4 +86,3 @@ struct LoginView: View {
 #Preview {
     LoginView()
 }
-

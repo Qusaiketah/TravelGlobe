@@ -4,11 +4,8 @@ struct SidebarView: View {
     @Binding var isOpen: Bool
     @ObservedObject var auth = AuthService.shared
     
-    // User Data (Dynamic)
     let username: String = "Jane Doe"
     let age: Int = 24
-    
-    // Dummy Trips Data
     let trips = [
         Trip(id: 1, location: "Paris, France", year: "2024", icon: "building.columns.fill", color: .purple),
         Trip(id: 2, location: "Tokyo, Japan", year: "2023", icon: "tram.fill", color: .pink),
@@ -19,7 +16,6 @@ struct SidebarView: View {
         GeometryReader { geometry in
             let sidebarWidth = geometry.size.width * 0.85
             ZStack(alignment: .leading) {
-                // 1. Dimmed Background (Tap to close)
                 Color.black.opacity(0.6)
                     .ignoresSafeArea()
                     .background(.ultraThinMaterial)
@@ -27,10 +23,8 @@ struct SidebarView: View {
                         withAnimation { isOpen = false }
                     }
                 
-                // 2. The Sidebar Content
                 VStack(alignment: .leading, spacing: 0) {
                     
-                    // --- TOP BAR (Close Button) ---
                     HStack {
                         Spacer()
                         Button(action: { withAnimation { isOpen = false } }) {
@@ -45,7 +39,6 @@ struct SidebarView: View {
                     .padding(.top, 32)
                     .padding(.trailing, 24)
                     
-                    // --- HEADER (Profile) ---
                     VStack(alignment: .leading, spacing: 16) {
                         ZStack {
                             Circle()
@@ -74,13 +67,12 @@ struct SidebarView: View {
                     .padding(.top, -8)
                     .padding(.bottom, 16)
                     
-                    // --- STATS ROW (THE PART YOU WANTED BACK) ---
                     HStack(spacing: 0) {
-                        StatBox(number: "0", label: "Countries") // Set to 0
+                        StatBox(number: "0", label: "Countries")
                         Divider().background(Color.white.opacity(0.1))
-                        StatBox(number: "0", label: "Cities")    // Set to 0
+                        StatBox(number: "0", label: "Cities")
                         Divider().background(Color.white.opacity(0.1))
-                        StatBox(number: "0", label: "Photos")    // Set to 0
+                        StatBox(number: "0", label: "Photos")
                     }
                     .frame(height: 80)
                     .background(Color.white.opacity(0.05))
@@ -92,7 +84,6 @@ struct SidebarView: View {
                     .padding(.horizontal, 24)
                     .padding(.bottom, 30)
                     
-                    // --- JOURNEYS LIST ---
                     VStack(alignment: .leading, spacing: 15) {
                         Text("YOUR JOURNEYS")
                             .font(.caption)
@@ -115,8 +106,6 @@ struct SidebarView: View {
                     }
                     
                     Spacer()
-                    
-                    // --- SIGN OUT ---
                     VStack {
                         Divider().background(Color.white.opacity(0.1))
                         Button(action: { auth.signOut() }) {
@@ -143,7 +132,6 @@ struct SidebarView: View {
     }
 }
 
-// --- SUBVIEWS ---
 
 struct StatBox: View {
     let number: String

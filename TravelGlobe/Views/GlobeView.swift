@@ -3,8 +3,15 @@ import MapKit
 import Combine
 import CoreLocation
 
+struct MemoryPin: Identifiable {
+    let id = UUID()
+    let coordinate: CLLocationCoordinate2D
+    let title: String
+}
+
 struct GlobeView: View {
-    // 1. Kamera
+    @Binding var showSidebar: Bool
+    @Binding var showNewTrip: Bool
     @State private var position: MapCameraPosition = .camera(
         MapCamera(
             centerCoordinate: CLLocationCoordinate2D(latitude: 48.8566, longitude: 2.3522),
@@ -14,72 +21,86 @@ struct GlobeView: View {
         )
     )
     
-    // Spåra rörelser
     @State private var currentCenter = CLLocationCoordinate2D(latitude: 48.8566, longitude: 2.3522)
     @State private var currentDistance: Double = 4_000_000
-    
-    // 2. Managers
     @StateObject private var searchVM = SearchViewModel()
     @StateObject private var locationManager = LocationManager()
-    
     @State private var isSearching: Bool = false
     @State private var errorMessage: String?
     @FocusState private var isFocused: Bool
     
+    let memoryPins = [
+        MemoryPin(coordinate: CLLocationCoordinate2D(latitude: 48.8566, longitude: 2.3522), title: "Paris")
+    ]
+    
     var body: some View {
         ZStack(alignment: .top) {
             
-            // LAGER 1: KARTA
-            Map(position: $position)
-                .mapStyle(.hybrid(elevation: .realistic))
-                .onMapCameraChange(frequency: .continuous) { context in
-                    self.currentCenter = context.camera.centerCoordinate
-                    self.currentDistance = context.camera.distance
-                }
-                .ignoresSafeArea()
-                .onTapGesture { isFocused = false }
-                .onChange(of: locationManager.userLocation) { newLocation in
-                    if let location = newLocation {
-                        withAnimation(.easeInOut(duration: 2.0)) {
-                            position = .camera(MapCamera(
-                                centerCoordinate: location,
-                                distance: 10_000,
-                                heading: 0,
-                                pitch: 60
-                            ))
+            Map(position: $position) {
+                ForEach(memoryPins) { pin in
+                    Annotation(pin.title, coordinate: pin.coordinate) {
+                        ZStack {
+                            Circle().fill(.black).frame(width: 40, height: 40).shadow(radius: 5)
+                            Image(systemName: "photo.fill").foregroundColor(.white).font(.caption)
                         }
+                        .overlay(Circle().stroke(Color.blue, lineWidth: 2))
                     }
                 }
+            }
+            .mapStyle(.hybrid(elevation: .realistic))
+            .onMapCameraChange(frequency: .continuous) { context in
+                self.currentCenter = context.camera.centerCoordinate
+                self.currentDistance = context.camera.distance
+            }
+            .ignoresSafeArea()
+            .onTapGesture { isFocused = false }
+            .onReceive(locationManager.$userLocation) { newLocation in
+                if let location = newLocation {
+                    withAnimation(.easeInOut(duration: 2.0)) {
+                        position = .camera(MapCamera(centerCoordinate: location, distance: 10_000, heading: 0, pitch: 60))
+                    }
+                }
+            }
             
-            // --- LAGER 2: SÖKFÄLT (TOPPEN) ---
             VStack(spacing: 0) {
-                HStack {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundColor(.gray)
+                HStack(spacing: 12) {
                     
-                    TextField("Sök stad...", text: $searchVM.query)
-                        .foregroundColor(.white)
-                        .focused($isFocused)
-                        .onSubmit { performSearch(query: searchVM.query) }
-                        .submitLabel(.search)
+                    Button(action: { withAnimation { showSidebar = true } }) {
+                        Image(systemName: "line.3.horizontal")
+                            .font(.title2)
+                            .foregroundColor(.white)
+                            .frame(width: 50, height: 50)
+                            .background(.ultraThinMaterial)
+                            .background(Color.black.opacity(0.4))
+                            .clipShape(Circle())
+                            .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 1))
+                    }
                     
-                    if isSearching { ProgressView().tint(.white) }
-                    
-                    if !searchVM.query.isEmpty {
-                        Button(action: { searchVM.query = "" }) {
-                            Image(systemName: "xmark.circle.fill").foregroundColor(.gray)
+                    HStack {
+                        Image(systemName: "magnifyingglass").foregroundColor(.gray)
+                        TextField("Search...", text: $searchVM.query)
+                            .foregroundColor(.white)
+                            .focused($isFocused)
+                            .onSubmit { performSearch(query: searchVM.query) }
+                            .submitLabel(.search)
+                        
+                        if isSearching { ProgressView().tint(.white) }
+                        
+                        if !searchVM.query.isEmpty {
+                            Button(action: { searchVM.query = "" }) {
+                                Image(systemName: "xmark.circle.fill").foregroundColor(.gray)
+                            }
                         }
                     }
+                    .padding(12)
+                    .background(.ultraThinMaterial)
+                    .background(Color.black.opacity(0.4))
+                    .clipShape(Capsule())
+                    .overlay(Capsule().stroke(Color.white.opacity(0.2), lineWidth: 1))
                 }
-                .padding()
-                .background(.ultraThinMaterial)
-                .background(Color.black.opacity(0.4))
-                .clipShape(Capsule())
-                .overlay(Capsule().stroke(Color.white.opacity(0.2), lineWidth: 1))
                 .padding(.horizontal, 20)
-                .padding(.top, 20)
+                .padding(.top, 10)
                 
-
                 if !searchVM.suggestions.isEmpty && isFocused {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 0) {
@@ -111,161 +132,91 @@ struct GlobeView: View {
                     .cornerRadius(15)
                     .overlay(RoundedRectangle(cornerRadius: 15).stroke(Color.white.opacity(0.2), lineWidth: 1))
                     .frame(maxHeight: 250)
-                    .padding(.horizontal, 20)
+                    .padding(.horizontal, 80)
                     .padding(.top, 10)
-                }
-                
-                if let error = errorMessage {
-                    Text(error)
-                        .foregroundColor(.red)
-                        .font(.caption)
-                        .padding(8)
-                        .background(Color.black.opacity(0.8))
-                        .cornerRadius(8)
-                        .padding(.top, 10)
                 }
                 
                 Spacer()
             }
             
-
             VStack {
                 Spacer()
-                HStack {
+                HStack(alignment: .bottom) {
+                    
+                    Button(action: { showNewTrip = true }) {
+                        HStack {
+                            Image(systemName: "plus")
+                            Text("New Trip")
+                        }
+                        .bold()
+                        .foregroundColor(.white)
+                        .padding(.vertical, 12)
+                        .padding(.horizontal, 20)
+                        .background(Color.blue)
+                        .clipShape(Capsule())
+                        .shadow(color: .blue.opacity(0.4), radius: 10, y: 5)
+                    }
+                    
                     Spacer()
-
+                    
                     VStack(spacing: 12) {
-
                         Button(action: {
                             locationManager.requestLocation()
-                            if let userLoc = locationManager.userLocation {
-                                withAnimation(.easeInOut(duration: 2.0)) {
-                                    position = .camera(MapCamera(
-                                        centerCoordinate: userLoc,
-                                        distance: 10_000,
-                                        heading: 0,
-                                        pitch: 60
-                                    ))
-                                }
-                            }
                         }) {
                             Image(systemName: "location.fill")
                                 .font(.title2)
-                                .frame(width: 50, height: 50)
                                 .foregroundColor(.white)
+                                .frame(width: 50, height: 50)
                                 .background(.ultraThinMaterial)
                                 .background(Color.black.opacity(0.5))
                                 .clipShape(Circle())
                                 .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 1))
                         }
-
-                        // 2. Zoomreglage (Underst)
+                        
                         VStack(spacing: 0) {
-                            Button(action: zoomIn) {
-                                Image(systemName: "plus")
-                                    .font(.title2)
-                                    .frame(width: 50, height: 50)
-                                    .foregroundColor(.white)
-                                    .contentShape(Rectangle())
-                            }
+                            Button(action: zoomIn) { Image(systemName: "plus").font(.title2).frame(width: 50, height: 50).foregroundColor(.white).contentShape(Rectangle()) }
                             Divider().background(Color.white.opacity(0.3)).frame(width: 30)
-                            Button(action: zoomOut) {
-                                Image(systemName: "minus")
-                                    .font(.title2)
-                                    .frame(width: 50, height: 50)
-                                    .foregroundColor(.white)
-                                    .contentShape(Rectangle())
-                            }
+                            Button(action: zoomOut) { Image(systemName: "minus").font(.title2).frame(width: 50, height: 50).foregroundColor(.white).contentShape(Rectangle()) }
                         }
-                        .background(.ultraThinMaterial)
-                        .background(Color.black.opacity(0.5))
-                        .cornerRadius(15)
+                        .background(.ultraThinMaterial).background(Color.black.opacity(0.5)).cornerRadius(15)
                         .overlay(RoundedRectangle(cornerRadius: 15).stroke(Color.white.opacity(0.2), lineWidth: 1))
                     }
-                    .padding(.trailing, 20)
-                    .padding(.bottom, 40)
                 }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 40)
             }
         }
     }
     
-    // --- FUNKTIONER ---
-    
-    func zoomIn() {
-        withAnimation {
-            let newDistance = max(1000, currentDistance * 0.5)
-            position = .camera(MapCamera(centerCoordinate: currentCenter, distance: newDistance, heading: 0, pitch: 45))
-        }
-    }
-    
-    func zoomOut() {
-        withAnimation {
-            let newDistance = currentDistance * 2.0
-            position = .camera(MapCamera(centerCoordinate: currentCenter, distance: newDistance, heading: 0, pitch: 0))
-        }
-    }
+    // FUNKTIONER
+    func zoomIn() { withAnimation { position = .camera(MapCamera(centerCoordinate: currentCenter, distance: max(1000, currentDistance * 0.5), heading: 0, pitch: 45)) } }
+    func zoomOut() { withAnimation { position = .camera(MapCamera(centerCoordinate: currentCenter, distance: currentDistance * 2.0, heading: 0, pitch: 0)) } }
     
     func performSearch(query: String) {
         guard !query.isEmpty else { return }
-        isSearching = true
-        errorMessage = nil
-        isFocused = false
-        
+        isSearching = true; isFocused = false
         let request = MKLocalSearch.Request()
         request.naturalLanguageQuery = query
-        
-        let search = MKLocalSearch(request: request)
-        search.start { response, error in
+        MKLocalSearch(request: request).start { response, error in
             isSearching = false
-            
-            guard error == nil,
-                  let item = response?.mapItems.first,
-                  let boundingRegion = response?.boundingRegion else {
-                errorMessage = "Platsen hittades inte"
-                return
-            }
-            
-            let coordinate = item.placemark.coordinate
-            
-            let metersPerLat = 111_000.0
-            let metersPerLon = cos(coordinate.latitude * .pi / 180) * 111_000.0
-            let widthMeters = boundingRegion.span.longitudeDelta * metersPerLon
-            let heightMeters = boundingRegion.span.latitudeDelta * metersPerLat
-            let regionSize = max(widthMeters, heightMeters)
-            let targetDistance = regionSize * 2.5
-            let clampedDistance = max(800, min(targetDistance, 50_000_000))
-            
-            withAnimation(.easeInOut(duration: 2.0)) {
-                position = .camera(MapCamera(
-                    centerCoordinate: coordinate,
-                    distance: clampedDistance,
-                    heading: 0,
-                    pitch: 60
-                ))
+            if let item = response?.mapItems.first {
+                let coordinate = item.placemark.coordinate
+                let distance: CLLocationDistance = (item.placemark.region as? CLCircularRegion).map { max(80_000, min(300_000, $0.radius * 6.0)) } ?? 150_000
+                withAnimation(.easeInOut(duration: 2.0)) {
+                    position = .camera(MapCamera(centerCoordinate: coordinate, distance: max(1000, distance / 4.0), heading: 0, pitch: 60))
+                }
             }
         }
     }
 }
 
-
+// KLASSER
 class SearchViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDelegate {
-    @Published var query: String = "" {
-        didSet { completer.queryFragment = query }
-    }
+    @Published var query: String = "" { didSet { completer.queryFragment = query } }
     @Published var suggestions: [MKLocalSearchCompletion] = []
     private let completer = MKLocalSearchCompleter()
-    
-    override init() {
-        super.init()
-        completer.delegate = self
-        completer.resultTypes = .pointOfInterest
-    }
-    
-    func completerDidUpdateResults(_ completer: MKLocalSearchCompleter) {
-        self.suggestions = completer.results.filter { !$0.title.isEmpty }
-    }
-    
-    func completer(_ completer: MKLocalSearchCompleter, didFailWithError error: Error) {}
+    override init() { super.init(); completer.delegate = self; completer.resultTypes = .pointOfInterest }
+    func completerDidUpdateResults(_ completer: MKLocalSearchCompleter) { self.suggestions = completer.results.filter { !$0.title.isEmpty } }
 }
 
 class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
@@ -281,7 +232,7 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     }
     
     func requestLocation() {
-        manager.requestWhenInUseAuthorization()
+        manager.stopUpdatingLocation()
         manager.startUpdatingLocation()
     }
     
@@ -290,14 +241,12 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
         DispatchQueue.main.async {
             self.userLocation = location.coordinate
         }
-        manager.stopUpdatingLocation()
     }
     
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
         print("GPS Error: \(error.localizedDescription)")
     }
 }
-
 
 extension CLLocationCoordinate2D: Equatable {
     public static func == (lhs: CLLocationCoordinate2D, rhs: CLLocationCoordinate2D) -> Bool {
@@ -306,5 +255,8 @@ extension CLLocationCoordinate2D: Equatable {
 }
 
 #Preview {
-    GlobeView()
+    GlobeView(
+        showSidebar: .constant(false),
+        showNewTrip: .constant(false)
+    )
 }
