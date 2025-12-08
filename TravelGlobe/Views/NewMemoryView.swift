@@ -6,12 +6,7 @@ import PhotosUI
 
 struct NewMemoryView: View {
     @Environment(\.dismiss) var dismiss
-    @State private var locationText: String = ""
-    @State private var caption: String = ""
-    @State private var selectedPhotoItems: [PhotosPickerItem] = []
-    @State private var selectedImages: [UIImage] = []
-    @StateObject private var searchVM = MemorySearchModel()
-    @StateObject private var locManager = MemoryLocationManager()
+    @StateObject private var viewModel = NewMemoryViewModel()
     @FocusState private var isFocused: Bool
     
     var body: some View {
@@ -42,31 +37,23 @@ struct NewMemoryView: View {
                         HStack(spacing: 10) {
                             Image(systemName: "mappin.and.ellipse").foregroundColor(.red)
                             
-                            TextField("Search City (e.g. Tokyo)...", text: $locationText)
+                            TextField("Search City (e.g. Tokyo)...", text: $viewModel.locationText)
                                 .foregroundColor(.white)
                                 .focused($isFocused)
-                                .onChange(of: locationText) { newValue in
-                                    searchVM.query = newValue
-                                }
                             
                             Spacer()
                             
-                            // 2. RENSA-KNAPP (X)
-                            if !locationText.isEmpty {
-                                Button(action: {
-                                    locationText = ""
-                                    searchVM.query = ""
-                                }) {
+                            if !viewModel.locationText.isEmpty {
+                                Button(action: viewModel.clearLocation) {
                                     Image(systemName: "xmark.circle.fill")
                                         .foregroundColor(.gray)
                                         .font(.body)
                                 }
                                 .padding(.trailing, 5)
                             }
-                            
-                            Button(action: { locManager.requestLocation() }) {
+                            Button(action: viewModel.requestCurrentLocation) {
                                 Group {
-                                    if locManager.isLoading {
+                                    if viewModel.isLoadingLocation {
                                         ProgressView().tint(.blue)
                                     } else {
                                         Image(systemName: "location.fill")
@@ -84,13 +71,12 @@ struct NewMemoryView: View {
                         .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.blue.opacity(0.5), lineWidth: 1))
                         .zIndex(1)
                         
-                        if !searchVM.suggestions.isEmpty && isFocused {
+                        if !viewModel.searchSuggestions.isEmpty && isFocused {
                             ScrollView {
                                 VStack(spacing: 0) {
-                                    ForEach(searchVM.suggestions, id: \.self) { suggestion in
+                                    ForEach(viewModel.searchSuggestions, id: \.self) { suggestion in
                                         Button(action: {
-                                            locationText = suggestion.title + ", " + suggestion.subtitle
-                                            searchVM.query = ""
+                                            viewModel.selectSuggestion(suggestion)
                                             isFocused = false
                                         }) {
                                             VStack(alignment: .leading) {
@@ -116,13 +102,14 @@ struct NewMemoryView: View {
                     }
                 }
                 .zIndex(10)
-                                VStack(alignment: .leading, spacing: 8) {
+                
+                VStack(alignment: .leading, spacing: 8) {
                     Text("PHOTOS & VIDEOS").font(.caption).foregroundColor(.gray)
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 12) {
                             
                             PhotosPicker(
-                                selection: $selectedPhotoItems,
+                                selection: $viewModel.selectedPhotoItems,
                                 maxSelectionCount: 5,
                                 matching: .any(of: [.images, .videos])
                             ) {
@@ -136,19 +123,8 @@ struct NewMemoryView: View {
                                 .cornerRadius(12)
                                 .overlay(RoundedRectangle(cornerRadius: 12).stroke(style: StrokeStyle(lineWidth: 1, dash: [5])).foregroundColor(.gray))
                             }
-                            .onChange(of: selectedPhotoItems) { newItems in
-                                Task {
-                                    selectedImages.removeAll()
-                                    for item in newItems {
-                                        if let data = try? await item.loadTransferable(type: Data.self),
-                                           let image = UIImage(data: data) {
-                                            selectedImages.append(image)
-                                        }
-                                    }
-                                }
-                            }
                             
-                            ForEach(selectedImages, id: \.self) { image in
+                            ForEach(viewModel.selectedImages, id: \.self) { image in
                                 Image(uiImage: image)
                                     .resizable()
                                     .scaledToFill()
@@ -156,7 +132,7 @@ struct NewMemoryView: View {
                                     .clipShape(RoundedRectangle(cornerRadius: 12))
                             }
                             
-                            if selectedImages.isEmpty {
+                            if viewModel.selectedImages.isEmpty {
                                 ForEach(0..<3) { _ in
                                     RoundedRectangle(cornerRadius: 12)
                                         .fill(Color.white.opacity(0.05))
@@ -169,6 +145,7 @@ struct NewMemoryView: View {
                 }
                 .zIndex(1)
                 
+                // Caption
                 VStack(alignment: .leading, spacing: 8) {
                     Text("CAPTION").font(.caption).foregroundColor(.gray)
                     
@@ -177,14 +154,14 @@ struct NewMemoryView: View {
                             .fill(Color.white.opacity(0.05))
                             .frame(height: 120)
                         
-                        if caption.isEmpty {
+                        if viewModel.caption.isEmpty {
                             Text("Write about your experience...")
                                 .foregroundColor(.gray.opacity(0.5))
                                 .padding(.horizontal, 16)
                                 .padding(.top, 16)
                         }
                         
-                        TextEditor(text: $caption)
+                        TextEditor(text: $viewModel.caption)
                             .scrollContentBackground(.hidden)
                             .padding(12)
                             .frame(height: 120)
@@ -193,8 +170,9 @@ struct NewMemoryView: View {
                 }
                 
                 Spacer()
+                
                 Button(action: {
-                    print("Pinning location: \(locationText) with \(selectedImages.count) photos.")
+                    viewModel.saveMemory()
                     dismiss()
                 }) {
                     HStack {
@@ -204,61 +182,16 @@ struct NewMemoryView: View {
                     .bold()
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(locationText.isEmpty ? Color.gray.opacity(0.3) : Color.blue)
+                    .background(viewModel.locationText.isEmpty ? Color.gray.opacity(0.3) : Color.blue)
                     .foregroundColor(.white)
                     .cornerRadius(30)
                 }
-                .disabled(locationText.isEmpty)
+                .disabled(viewModel.locationText.isEmpty)
                 .padding(.bottom)
             }
             .padding()
-            .onReceive(locManager.$placemarkName) { newName in
-                if let name = newName { self.locationText = name }
-            }
         }
     }
-}
-
-class MemorySearchModel: NSObject, ObservableObject, MKLocalSearchCompleterDelegate {
-    @Published var query: String = "" { didSet { completer.queryFragment = query } }
-    @Published var suggestions: [MKLocalSearchCompletion] = []
-    private let completer = MKLocalSearchCompleter()
-    override init() {
-        super.init()
-        completer.delegate = self
-        completer.resultTypes = .pointOfInterest
-    }
-    func completerDidUpdateResults(_ completer: MKLocalSearchCompleter) {
-        self.suggestions = completer.results.filter { !$0.title.isEmpty }
-    }
-}
-
-class MemoryLocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
-    private let manager = CLLocationManager()
-    @Published var placemarkName: String?
-    @Published var isLoading = false
-    override init() {
-        super.init()
-        manager.delegate = self
-        manager.desiredAccuracy = kCLLocationAccuracyBest
-    }
-    func requestLocation() {
-        isLoading = true
-        manager.requestWhenInUseAuthorization()
-        manager.requestLocation()
-    }
-    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        guard let location = locations.last else { return }
-        CLGeocoder().reverseGeocodeLocation(location) { placemarks, _ in
-            DispatchQueue.main.async {
-                self.isLoading = false
-                if let place = placemarks?.first {
-                    self.placemarkName = "\(place.locality ?? ""), \(place.country ?? "")"
-                }
-            }
-        }
-    }
-    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) { isLoading = false }
 }
 
 #Preview {

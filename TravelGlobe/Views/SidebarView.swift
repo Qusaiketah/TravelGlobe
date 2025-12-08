@@ -2,15 +2,7 @@ import SwiftUI
 
 struct SidebarView: View {
     @Binding var isOpen: Bool
-    @ObservedObject var auth = AuthService.shared
-    
-    let username: String = "Jane Doe"
-    let age: Int = 24
-    let trips = [
-        Trip(id: 1, location: "Paris, France", year: "2024", icon: "building.columns.fill", color: .purple),
-        Trip(id: 2, location: "Tokyo, Japan", year: "2023", icon: "tram.fill", color: .pink),
-        Trip(id: 3, location: "New York, USA", year: "2023", icon: "building.2.fill", color: .blue)
-    ]
+    @StateObject private var viewModel = SidebarViewModel()
     
     var body: some View {
         GeometryReader { geometry in
@@ -46,14 +38,14 @@ struct SidebarView: View {
                                 .frame(width: 80, height: 80)
                                 .shadow(color: .blue.opacity(0.3), radius: 10, y: 5)
                             
-                            Text(String(username.prefix(2)).uppercased())
+                            Text(String(viewModel.username.prefix(2)).uppercased())
                                 .font(.title)
                                 .bold()
                                 .foregroundColor(.white)
                         }
                         
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("\(username), \(age)")
+                            Text("\(viewModel.username), \(viewModel.age)")
                                 .font(.title3)
                                 .bold()
                                 .foregroundColor(.white)
@@ -77,10 +69,7 @@ struct SidebarView: View {
                     .frame(height: 80)
                     .background(Color.white.opacity(0.05))
                     .cornerRadius(16)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16)
-                            .stroke(Color.white.opacity(0.1), lineWidth: 1)
-                    )
+                    .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.1), lineWidth: 1))
                     .padding(.horizontal, 24)
                     .padding(.bottom, 30)
                     
@@ -93,7 +82,7 @@ struct SidebarView: View {
                         
                         ScrollView {
                             VStack(spacing: 12) {
-                                ForEach(trips) { trip in
+                                ForEach(viewModel.trips) { trip in
                                     Button(action: {
                                         print("Opening trip details for \(trip.location)")
                                     }) {
@@ -106,9 +95,10 @@ struct SidebarView: View {
                     }
                     
                     Spacer()
+                    
                     VStack {
                         Divider().background(Color.white.opacity(0.1))
-                        Button(action: { auth.signOut() }) {
+                        Button(action: { viewModel.signOut() }) {
                             HStack(spacing: 12) {
                                 Image(systemName: "rectangle.portrait.and.arrow.right")
                                 Text("Sign Out")
@@ -186,14 +176,6 @@ struct TripCard: View {
                 .stroke(Color.white.opacity(0.08), lineWidth: 1)
         )
     }
-}
-
-struct Trip: Identifiable {
-    let id: Int
-    let location: String
-    let year: String
-    let icon: String
-    let color: Color
 }
 
 #Preview {
