@@ -13,14 +13,19 @@ import Combine
 class AuthService: ObservableObject {
 
     @Published var userSession: FirebaseAuth.User?
-    
     @Published var isMockLoggedIn = false
+    @Published var currentUserProfile: UserProfile?
 
     static let shared = AuthService()
     
     init() {
         self.userSession = Auth.auth().currentUser
     }
+    
+    func saveProfile(username: String, age: Int) {
+            self.currentUserProfile = UserProfile(username: username, age: age)
+            print("✅ AuthService: Profil sparad: \(username), \(age)")
+        }
     
     func signInMock() {
         print("AuthService: Fake signing in...")

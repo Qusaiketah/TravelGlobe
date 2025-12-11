@@ -9,14 +9,39 @@ import SwiftUI
 import Combine
 
 class SidebarViewModel: ObservableObject {
-    @Published var username: String = "Jane Doe"
-    @Published var age: Int = 24
+    @Published var username: String = "Explorer"
+    @Published var age: Int = 0
+    @Published var trips: [Trip] = []
     
-    @Published var trips: [Trip] = [
-        Trip(id: 1, location: "Paris, France", year: "2024", icon: "building.columns.fill", color: .purple),
-        Trip(id: 2, location: "Tokyo, Japan", year: "2023", icon: "tram.fill", color: .pink),
-        Trip(id: 3, location: "New York, USA", year: "2023", icon: "building.2.fill", color: .blue)
-    ]
+    private var cancellables = Set<AnyCancellable>()
+    var hasTrips: Bool { !trips.isEmpty }
+    
+    var recentTrips: [Trip] {
+        Array(trips.prefix(3))
+    }
+    
+    var showViewAllButton: Bool {
+        trips.count > 3
+    }
+    
+    init() {
+        TripService.shared.$trips
+            .receive(on: DispatchQueue.main)
+            .assign(to: \.trips, on: self)
+            .store(in: &cancellables)
+        
+        AuthService.shared.$currentUserProfile
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] profile in
+                if let profile = profile {
+                    self?.username = profile.username
+                    self?.age = profile.age
+                } else {
+                    self?.username = "Explorer"
+                }
+            }
+            .store(in: &cancellables)
+    }
     
     func signOut() {
         AuthService.shared.signOut()

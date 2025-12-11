@@ -30,7 +30,7 @@ struct LoginView: View {
                 }
                 
                 VStack(spacing: 10) {
-                    Text("Mohammad the best")
+                    Text("TravelGlobe")
                         .font(.system(size: 42, weight: .bold, design: .serif))
                         .foregroundColor(.white)
                     
