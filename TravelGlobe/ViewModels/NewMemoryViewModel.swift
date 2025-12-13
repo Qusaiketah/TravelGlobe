@@ -22,6 +22,8 @@ class NewMemoryViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDele
     @Published var selectedImages: [UIImage] = []
     @Published var isLoadingLocation: Bool = false
     
+    private var currentCoordinate: CLLocationCoordinate2D?
+    
     private let searchCompleter = MKLocalSearchCompleter()
     private let locationManager = CLLocationManager()
     private var skipSearchTrigger = false
@@ -42,12 +44,22 @@ class NewMemoryViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDele
         searchCompleter.queryFragment = ""
         searchSuggestions = []
         skipSearchTrigger = false
+        
+        let request = MKLocalSearch.Request(completion: suggestion)
+        let search = MKLocalSearch(request: request)
+        search.start { [weak self] response, _ in
+            if let item = response?.mapItems.first {
+                self?.currentCoordinate = item.placemark.coordinate
+                print("📍 Hittade koordinater för sökning: \(item.placemark.coordinate)")
+            }
+        }
     }
     
     func clearLocation() {
         locationText = ""
         searchCompleter.queryFragment = ""
         searchSuggestions = []
+        currentCoordinate = nil
     }
     
     func requestCurrentLocation() {
@@ -57,7 +69,18 @@ class NewMemoryViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDele
     }
     
     func saveMemory() {
-        print("Saving memory: \(locationText) with \(selectedImages.count) photos.")
+        guard !locationText.isEmpty else { return }
+        
+        print("💾 Sparar minne: \(locationText)")
+        
+        let coord = currentCoordinate ?? CLLocationCoordinate2D(latitude: 0, longitude: 0)
+        
+        TripService.shared.addTrip(
+            locationName: locationText,
+            coordinate: coord,
+            image: selectedImages.first,
+            caption: caption
+        )
     }
     
     private func loadImages() {
@@ -82,6 +105,8 @@ class NewMemoryViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDele
     
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         guard let location = locations.last else { return }
+        
+        self.currentCoordinate = location.coordinate
         
         CLGeocoder().reverseGeocodeLocation(location) { [weak self] placemarks, _ in
             DispatchQueue.main.async {
