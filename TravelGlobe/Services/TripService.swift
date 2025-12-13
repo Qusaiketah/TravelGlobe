@@ -1,6 +1,8 @@
 import Foundation
 import SwiftUI
 import CoreLocation
+import FirebaseFirestore
+import FirebaseAuth
 import Combine
 
 class TripService: ObservableObject {
@@ -8,59 +10,67 @@ class TripService: ObservableObject {
     static let shared = TripService()
     
     @Published var trips: [Trip] = []
+    private let db = Firestore.firestore()
     
-    private init() {}
+    private init() {
+        fetchTrips()
+    }
     
-    // Funktion för ny resa
     func addTrip(locationName: String, coordinate: CLLocationCoordinate2D, image: UIImage?, caption: String) {
-        
-        print("🌍 TripService: Startar att spara resa till \(locationName)...")
-        
-        // ladda upp bild först till AWS
         if let image = image {
-            StorageService.shared.uploadImage(image) { [weak self] downloadedURL in
-                self?.createAndAppendTrip(
-                    locationName: locationName,
-                    coordinate: coordinate,
-                    imageURL: downloadedURL,
-                    caption: caption
-                )
+            StorageService.shared.uploadImage(image) { [weak self] url in
+                self?.saveTripToFirestore(name: locationName, coord: coordinate, url: url, caption: caption)
             }
         } else {
-            // spara utan url när det ingen bild
-            createAndAppendTrip(
-                locationName: locationName,
-                coordinate: coordinate,
-                imageURL: nil,
-                caption: caption
-            )
+            saveTripToFirestore(name: locationName, coord: coordinate, url: nil, caption: caption)
         }
     }
     
-    private func createAndAppendTrip(locationName: String, coordinate: CLLocationCoordinate2D, imageURL: String?, caption: String) {
+    private func saveTripToFirestore(name: String, coord: CLLocationCoordinate2D, url: String?, caption: String) {
+        guard let uid = Auth.auth().currentUser?.uid else {
+            print("Ingen användare inloggad, kan inte spara till DB")
+            return
+        }
         
         let newTrip = Trip(
-            locationName: locationName,
-            coordinate: coordinate,
+            id: UUID(),
+            locationName: name,
+            latitude: coord.latitude,
+            longitude: coord.longitude,
             date: Date(),
-            imageURL: imageURL,
-            caption: caption,
-            color: .random()
+            imageURL: url,
+            caption: caption
         )
         
-        DispatchQueue.main.async {
-            self.trips.insert(newTrip, at: 0)
-            print("TripService: Resa sparad! Antal resor: \(self.trips.count)")
+        do {
+            try db.collection("users").document(uid).collection("trips").document(newTrip.id.uuidString).setData(from: newTrip)
+            print("Resa sparad i Firestore!")
+            
+            DispatchQueue.main.async {
+                self.trips.insert(newTrip, at: 0)
+            }
+        } catch {
+            print("Fel vid sparning av resa: \(error)")
         }
     }
-}
-
-extension Color {
-    static func random() -> Color {
-        return Color(
-            red: .random(in: 0...1),
-            green: .random(in: 0...1),
-            blue: .random(in: 0...1)
-        )
+    
+    func fetchTrips() {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+        
+        db.collection("users").document(uid).collection("trips")
+            .order(by: "date", descending: true)
+            .getDocuments { snapshot, error in
+                if let error = error {
+                    print("Kunde inte hämta resor: \(error)")
+                    return
+                }
+                
+                DispatchQueue.main.async {
+                    self.trips = snapshot?.documents.compactMap { doc in
+                        try? doc.data(as: Trip.self)
+                    } ?? []
+                    print("Hämtade \(self.trips.count) resor från Firestore")
+                }
+            }
     }
 }

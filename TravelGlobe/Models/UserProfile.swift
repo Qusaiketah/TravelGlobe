@@ -1,6 +1,6 @@
 import Foundation
 
-struct UserProfile {
+struct UserProfile: Codable {
     var username: String
     var age: Int
 }

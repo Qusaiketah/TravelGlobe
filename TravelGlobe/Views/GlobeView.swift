@@ -18,7 +18,7 @@ struct GlobeView: View {
                             Circle().fill(.black).frame(width: 40, height: 40).shadow(radius: 5)
                             Image(systemName: "photo.fill").foregroundColor(.white).font(.caption)
                         }
-                        .overlay(Circle().stroke(pin.color, lineWidth: 2))
+                        .overlay(Circle().stroke(pin.uiColor, lineWidth: 2))
                     }
                 }
             }

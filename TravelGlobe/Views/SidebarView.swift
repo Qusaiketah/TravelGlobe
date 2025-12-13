@@ -135,7 +135,7 @@ struct TripCard: View {
                 if let _ = trip.imageURL {
                     Image(systemName: "photo").foregroundColor(.blue).font(.system(size: 20))
                 } else {
-                    Image(systemName: trip.icon).foregroundColor(trip.color).font(.system(size: 20))
+                    Image(systemName: trip.icon).foregroundColor(trip.uiColor).font(.system(size: 20))
                 }
             }
             .frame(width: 56, height: 56).cornerRadius(12)
