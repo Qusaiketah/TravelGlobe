@@ -6,8 +6,24 @@ class StorageService {
     
     static let shared = StorageService()
     let bucketName = "travelglobe-media-qosai"
+    let identityPoolId = "eu-north-1:ce26d600-05e6-430f-8cf1-ea7add18bdd8"
     
-    private init() { }
+    private init() {
+        let credentialsProvider = AWSCognitoCredentialsProvider(
+            regionType: .EUNorth1,
+            identityPoolId: identityPoolId
+        )
+
+        let configuration = AWSServiceConfiguration(
+            region: .EUNorth1,
+            credentialsProvider: credentialsProvider
+        )
+
+        AWSServiceManager.default().defaultServiceConfiguration = configuration
+        
+        print("⚙️ AWS Service konfigurerad säkert med Cognito Identity Pool")
+    }
+    
     func uploadImage(_ image: UIImage, completion: @escaping (String?) -> Void) {
         
         guard let imageData = image.jpegData(compressionQuality: 0.8) else {
@@ -20,6 +36,7 @@ class StorageService {
         let key = "trip_images/\(filename)"
         
         let expression = AWSS3TransferUtilityUploadExpression()
+        
         let transferUtility = AWSS3TransferUtility.default()
         
         transferUtility.uploadData(
