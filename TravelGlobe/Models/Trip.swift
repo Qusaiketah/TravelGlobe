@@ -13,7 +13,7 @@ struct Trip: Identifiable, Codable {
     let latitude: Double
     let longitude: Double
     let date: Date
-    let imageURL: String?
+    let imageURLs: [String]?
     let caption: String?
     var color: String = "blue"
     var icon: String = "mappin.circle.fill"

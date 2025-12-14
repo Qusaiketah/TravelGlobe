@@ -1,42 +1,47 @@
 import SwiftUI
 
 struct ContentView: View {
-    @StateObject var auth = AuthService.shared
-    @State private var showMenu = false
+    @StateObject private var authService = AuthService.shared
+    @State private var showSidebar = false
     @State private var showNewTrip = false
-    @State private var hasProfile = false
     
     var body: some View {
-        ZStack {
-            if auth.userSession == nil && !auth.isMockLoggedIn {
-                LoginView()
-            } else if !hasProfile {
-                ProfileSetupView(isComplete: $hasProfile)
-            } else {
-                
-
+        Group {
+            if authService.isLoading {
                 ZStack {
-                    GlobeView(showSidebar: $showMenu, showNewTrip: $showNewTrip)
-                    
-                    if showMenu {
-                        SidebarView(isOpen: $showMenu)
-                            .zIndex(2)
-                            .transition(.move(edge: .leading))
+                    Color.black.ignoresSafeArea()
+                    VStack(spacing: 20) {
+                        ProgressView()
+                            .tint(.white)
+                            .scaleEffect(1.5)
+                        Text("Loading your world...")
+                            .foregroundColor(.gray)
+                            .font(.caption)
                     }
                 }
-                .sheet(isPresented: $showNewTrip) {
-                    NewMemoryView()
-                        .presentationDetents([.large])
-                        .presentationDragIndicator(.visible)
-                }
-                .onChange(of: showMenu) { newValue in
-                    print("ShowMenu ändrades till: \(newValue)")
-                }
-                .onChange(of: showNewTrip) { newValue in
-                    print("ShowNewTrip ändrades till: \(newValue)")
+            }
+            else if authService.userSession == nil {
+                LoginView()
+            }
+            else if authService.currentUserProfile == nil {
+                ProfileSetupView()
+            }
+            else {
+                ZStack(alignment: .leading) {
+                    GlobeView(showSidebar: $showSidebar, showNewTrip: $showNewTrip)
+                        .sheet(isPresented: $showNewTrip) {
+                            NewMemoryView()
+                        }
+                    
+                    if showSidebar {
+                        SidebarView(isOpen: $showSidebar)
+                            .transition(.move(edge: .leading))
+                            .zIndex(2)
+                    }
                 }
             }
         }
+        .animation(.easeInOut, value: authService.isLoading)
     }
 }
 

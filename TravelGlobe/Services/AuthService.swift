@@ -1,10 +1,3 @@
-//
-//  AuthService.swift
-//  TravelGlobe
-//
-//  Created by Qusai Ketah on 2025-12-04.
-//
-
 import Foundation
 import SwiftUI
 import FirebaseAuth
@@ -13,84 +6,86 @@ import Combine
 
 class AuthService: ObservableObject {
 
-    @Published var userSession: FirebaseAuth.User?
-    @Published var isMockLoggedIn = false
-    @Published var currentUserProfile: UserProfile?
-    private let db = Firestore.firestore()
-
     static let shared = AuthService()
     
+    @Published var userSession: FirebaseAuth.User?
+    @Published var currentUserProfile: UserProfile?
+    @Published var isLoading: Bool = true
+    
+    private let db = Firestore.firestore()
+
     init() {
         self.userSession = Auth.auth().currentUser
+
         if let uid = userSession?.uid {
-        fetchUserProfile(uid: uid) 
-                }
+            fetchUserProfile(uid: uid)
+        } else {
+            self.isLoading = false
+
+        }
+    }
+    
+    func signInMock() {
+        isLoading = true
+        print("AuthService: Försöker logga in anonymt...")
+        
+        Auth.auth().signInAnonymously { result, error in
+            if let error = error {
+                print("Fel: \(error.localizedDescription)")
+                self.isLoading = false
+                return
+            }
+            
+            print("Inloggad (Anonymt): \(result?.user.uid ?? "")")
+            self.userSession = result?.user
+
+            if let uid = result?.user.uid {
+                self.fetchUserProfile(uid: uid)
+            } else {
+                self.isLoading = false
+            }
+        }
     }
     
     func saveProfile(username: String, age: Int) {
-            guard let uid = userSession?.uid else { return }
-            
-            let profile = UserProfile(username: username, age: age)
-            self.currentUserProfile = profile
-            do {
-                try db.collection("users").document(uid).setData(from: profile)
-                print("Profil sparad i Firestore!")
-            } catch {
-                print("Fel vid sparning av profil: \(error)")
-            }
+        guard let uid = userSession?.uid else { return }
+        
+        let profile = UserProfile(username: username, age: age)
+        self.currentUserProfile = profile
+        
+        do {
+            try db.collection("users").document(uid).setData(from: profile)
+            print("Profil sparad!")
+        } catch {
+            print("Kunde inte spara profil: \(error)")
         }
+    }
     
     func fetchUserProfile(uid: String) {
-            db.collection("users").document(uid).getDocument { snapshot, error in
-                if let error = error {
-                    print("Kunde inte hämta profil: \(error)")
-                    return
-                }
+        print("📥 Hämtar profil från Firestore...")
+        db.collection("users").document(uid).getDocument { snapshot, error in
+            
+            DispatchQueue.main.async {
+                self.isLoading = false
+                
                 if let snapshot = snapshot, snapshot.exists {
                     do {
                         self.currentUserProfile = try snapshot.data(as: UserProfile.self)
+                        print("Profil hittad: \(self.currentUserProfile?.username ?? "")")
                     } catch {
-                        print("Fel vid avkodning av profil")
+                        print("Kunde inte avkoda profil.")
                     }
+                } else {
+                    print("Ingen profil hittades i databasen.")
                 }
             }
         }
-    
-    func signInMock() {
-            print("AuthService: Försöker logga in anonymt...")
-            
-            Auth.auth().signInAnonymously { result, error in
-                if let error = error {
-                    print("Misslyckades med anonym inloggning: \(error.localizedDescription)")
-                    return
-                }
-                
-                print("Anonym inloggning lyckades! User ID: \(result?.user.uid ?? "N/A")")
-                
-                DispatchQueue.main.async {
-                    self.userSession = result?.user
-                    withAnimation {
-                        self.isMockLoggedIn = true
-                    }
-                }
-            }
-        }
-    
-    func signInWithGoogle() {
-        print("AuthService: Starting Google Sign In...")
-        signInMock()
     }
     
     func signOut() {
-        do {
-            try Auth.auth().signOut()
-            self.userSession = nil
-            withAnimation {
-                self.isMockLoggedIn = false
-            }
-            print("AuthService: Signed out successfully")
-        } catch {
-            print("AuthService: Error signing out: \(error.localizedDescription)")
-        }
+        try? Auth.auth().signOut()
+        self.userSession = nil
+        self.currentUserProfile = nil
+        self.isLoading = false
     }
 }

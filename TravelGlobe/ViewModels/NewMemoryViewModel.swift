@@ -69,19 +69,19 @@ class NewMemoryViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDele
     }
     
     func saveMemory() {
-        guard !locationText.isEmpty else { return }
-        
-        print("💾 Sparar minne: \(locationText)")
-        
-        let coord = currentCoordinate ?? CLLocationCoordinate2D(latitude: 0, longitude: 0)
-        
-        TripService.shared.addTrip(
-            locationName: locationText,
-            coordinate: coord,
-            image: selectedImages.first,
-            caption: caption
-        )
-    }
+            guard !locationText.isEmpty else { return }
+            
+            print("💾 Sparar minne: \(locationText)")
+            
+            let coord = currentCoordinate ?? CLLocationCoordinate2D(latitude: 0, longitude: 0)
+            
+            TripService.shared.addTrip(
+                locationName: locationText,
+                coordinate: coord,
+                images: selectedImages,
+                caption: caption
+            )
+        }
     
     private func loadImages() {
         Task {

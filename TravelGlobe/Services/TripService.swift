@@ -15,22 +15,36 @@ class TripService: ObservableObject {
     private init() {
         fetchTrips()
     }
-    
-    func addTrip(locationName: String, coordinate: CLLocationCoordinate2D, image: UIImage?, caption: String) {
-        if let image = image {
-            StorageService.shared.uploadImage(image) { [weak self] url in
-                self?.saveTripToFirestore(name: locationName, coord: coordinate, url: url, caption: caption)
+
+    func addTrip(locationName: String, coordinate: CLLocationCoordinate2D, images: [UIImage], caption: String) {
+        
+        if images.isEmpty {
+            saveTripToFirestore(name: locationName, coord: coordinate, urls: nil, caption: caption)
+            return
+        }
+        var uploadedURLs: [String] = []
+        let group = DispatchGroup()
+        
+        for image in images {
+            group.enter()
+            StorageService.shared.uploadImage(image) { url in
+                if let url = url {
+                    uploadedURLs.append(url)
+                }
+                group.leave()
             }
-        } else {
-            saveTripToFirestore(name: locationName, coord: coordinate, url: nil, caption: caption)
+        }
+        
+        group.notify(queue: .main) { [weak self] in
+            print("📸 Alla bilder uppladdade: \(uploadedURLs.count) st")
+            self?.saveTripToFirestore(name: locationName, coord: coordinate, urls: uploadedURLs, caption: caption)
         }
     }
     
-    private func saveTripToFirestore(name: String, coord: CLLocationCoordinate2D, url: String?, caption: String) {
-        guard let uid = Auth.auth().currentUser?.uid else {
-            print("Ingen användare inloggad, kan inte spara till DB")
-            return
-        }
+    private func saveTripToFirestore(name: String, coord: CLLocationCoordinate2D, urls: [String]?, caption: String) {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+        
+        let randomColorName = ["blue", "red", "green", "purple", "pink", "orange"].randomElement() ?? "blue"
         
         let newTrip = Trip(
             id: UUID(),
@@ -38,19 +52,20 @@ class TripService: ObservableObject {
             latitude: coord.latitude,
             longitude: coord.longitude,
             date: Date(),
-            imageURL: url,
-            caption: caption
+            imageURLs: urls,
+            caption: caption,
+            color: randomColorName
         )
         
         do {
             try db.collection("users").document(uid).collection("trips").document(newTrip.id.uuidString).setData(from: newTrip)
-            print("Resa sparad i Firestore!")
+            print("Resa sparad i Firestore med \(urls?.count ?? 0) bilder!")
             
             DispatchQueue.main.async {
                 self.trips.insert(newTrip, at: 0)
             }
         } catch {
-            print("Fel vid sparning av resa: \(error)")
+            print("Fel vid sparning: \(error)")
         }
     }
     
@@ -60,17 +75,37 @@ class TripService: ObservableObject {
         db.collection("users").document(uid).collection("trips")
             .order(by: "date", descending: true)
             .getDocuments { snapshot, error in
-                if let error = error {
-                    print("Kunde inte hämta resor: \(error)")
-                    return
-                }
+                if let _ = error { return }
                 
                 DispatchQueue.main.async {
                     self.trips = snapshot?.documents.compactMap { doc in
                         try? doc.data(as: Trip.self)
                     } ?? []
-                    print("Hämtade \(self.trips.count) resor från Firestore")
                 }
             }
     }
+    
+    func deleteTrip(_ trip: Trip) {
+            guard let uid = Auth.auth().currentUser?.uid else { return }
+            
+            if let urls = trip.imageURLs {
+                for url in urls {
+                    StorageService.shared.deleteImage(urlString: url)
+                }
+            }
+
+            let docRef = db.collection("users").document(uid).collection("trips").document(trip.id.uuidString)
+            
+            docRef.delete { error in
+                if let error = error {
+                    print("Kunde inte radera från Firestore: \(error)")
+                } else {
+                    print("Resa raderad från Firestore!")
+                }
+            }
+            
+            DispatchQueue.main.async {
+                self.trips.removeAll { $0.id == trip.id }
+            }
+        }
 }

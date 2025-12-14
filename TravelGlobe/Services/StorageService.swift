@@ -1,70 +1,68 @@
 import Foundation
-import UIKit
+import SwiftUI
 import AWSS3
 
 class StorageService {
     
     static let shared = StorageService()
-    private let bucketName = "travelglobe-media-qosai"
+    let bucketName = "travelglobe-media-qosai"
     
-    init() {
-        configureAWS()
-    }
-    
-    private func configureAWS() {
-        // hämtar nycklarna från Secrets.plist
-        guard let path = Bundle.main.path(forResource: "Secrets", ofType: "plist"),
-              let dict = NSDictionary(contentsOfFile: path),
-              let accessKey = dict["AWSAccessKey"] as? String,
-              let secretKey = dict["AWSSecretKey"] as? String else {
-            print("StorageService: Kunde inte hitta Secrets.plist eller nycklar!")
-            return
-        }
-        
-        let credentialsProvider = AWSStaticCredentialsProvider(accessKey: accessKey, secretKey: secretKey)
-        
-        //region (Stockholm)
-        let configuration = AWSServiceConfiguration(region: .EUNorth1, credentialsProvider: credentialsProvider)
-        
-        AWSServiceManager.default().defaultServiceConfiguration = configuration
-        print("StorageService: AWS Konfigurerat mot \(bucketName)!")
-    }
-    
-    // Funktion för att ladda upp en bild
+    private init() { }
     func uploadImage(_ image: UIImage, completion: @escaping (String?) -> Void) {
-        // Komprimera bilden lite så det går snabbare
-        guard let data = image.jpegData(compressionQuality: 0.8) else {
-            print("StorageService: Kunde inte konvertera bild till data.")
+        
+        guard let imageData = image.jpegData(compressionQuality: 0.8) else {
+            print("Kunde inte konvertera bild till data")
             completion(nil)
             return
         }
         
-        let fileName = "trip_images/\(UUID().uuidString).jpg"
+        let filename = "\(UUID().uuidString).jpg"
+        let key = "trip_images/\(filename)"
         
         let expression = AWSS3TransferUtilityUploadExpression()
-        expression.progressBlock = { (task, progress) in
-            print("Uploading... \(Int(progress.fractionCompleted * 100))%")
-        }
-        
         let transferUtility = AWSS3TransferUtility.default()
         
         transferUtility.uploadData(
-            data,
+            imageData,
             bucket: bucketName,
-            key: fileName,
+            key: key,
             contentType: "image/jpeg",
             expression: expression
         ) { (task, error) in
             if let error = error {
-                print("AWS Upload Error: \(error.localizedDescription)")
+                print("Uppladdning misslyckades: \(error.localizedDescription)")
                 completion(nil)
                 return
             }
             
-            // URL:en för eu-north-1
-            let urlString = "https://\(self.bucketName).s3.eu-north-1.amazonaws.com/\(fileName)"
-            print("✅ Upload Success! URL: \(urlString)")
+            let region = "eu-north-1"
+            let urlString = "https://\(self.bucketName).s3.\(region).amazonaws.com/\(key)"
+            
+            print("Upload Success! URL: \(urlString)")
             completion(urlString)
+        }
+    }
+    
+    func deleteImage(urlString: String) {
+        guard let url = URL(string: urlString) else { return }
+        
+        let path = url.path
+        let key = String(path.dropFirst())
+        
+        print("Försöker radera från S3: \(key)")
+        
+        guard let deleteRequest = AWSS3DeleteObjectRequest() else { return }
+        deleteRequest.bucket = bucketName
+        deleteRequest.key = key
+        
+        let s3 = AWSS3.default()
+        s3.deleteObject(deleteRequest).continueWith { (task) -> AnyObject? in
+            if let error = task.error {
+                print("Misslyckades att radera från S3: \(error.localizedDescription)")
+            } else {
+                print("Bild raderad från S3: \(key)")
+            }
+            return nil
         }
     }
 }

@@ -14,6 +14,17 @@ class SidebarViewModel: ObservableObject {
     @Published var trips: [Trip] = []
     
     private var cancellables = Set<AnyCancellable>()
+    var tripCount: Int { trips.count }
+
+    var cityCount: Int {
+        let uniqueLocations = Set(trips.map { $0.locationName })
+        return uniqueLocations.count
+    }
+    
+    var photoCount: Int {
+            trips.reduce(0) { $0 + ($1.imageURLs?.count ?? 0) }
+        }
+    
     var hasTrips: Bool { !trips.isEmpty }
     
     var recentTrips: [Trip] {
@@ -36,8 +47,6 @@ class SidebarViewModel: ObservableObject {
                 if let profile = profile {
                     self?.username = profile.username
                     self?.age = profile.age
-                } else {
-                    self?.username = "Explorer"
                 }
             }
             .store(in: &cancellables)
@@ -46,4 +55,9 @@ class SidebarViewModel: ObservableObject {
     func signOut() {
         AuthService.shared.signOut()
     }
+    
+        
+    func deleteTrip(_ trip: Trip) {
+            TripService.shared.deleteTrip(trip)
+        }
 }
