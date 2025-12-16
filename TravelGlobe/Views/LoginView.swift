@@ -1,11 +1,5 @@
-//
-//  LoginView.swift
-//  TravelGlobe
-//
-//  Created by Qusai Ketah on 2025-12-04.
-//
-
 import SwiftUI
+import AuthenticationServices
 
 struct LoginView: View {
     var body: some View {
@@ -44,11 +38,13 @@ struct LoginView: View {
                     Button(action: {
                         AuthService.shared.signInWithGoogle()
                     }) {
-                        HStack {
+                        HStack(spacing: 6) {
                             Image(systemName: "g.circle.fill")
+                                .font(.system(size: 17))
+                            
                             Text("Sign in with Google")
+                                .font(.system(size: 20, weight: .semibold))
                         }
-                        .bold()
                         .foregroundColor(.black)
                         .frame(maxWidth: .infinity)
                         .frame(height: 55)
@@ -56,24 +52,35 @@ struct LoginView: View {
                         .cornerRadius(15)
                     }
                     
-                    Button(action: {
-                        AuthService.shared.signInWithGoogle()
-                    }) {
-                        HStack {
-                            Image(systemName: "apple.logo")
-                            Text("Sign in with Apple")
+                    SignInWithAppleButton(
+                        onRequest: { request in
+                            let nonce = AuthService.shared.randomNonceString()
+                            AuthService.shared.currentNonce = nonce
+                            request.requestedScopes = [.fullName, .email]
+                            request.nonce = AuthService.shared.sha256(nonce)
+                        },
+                        onCompletion: { result in
+                            switch result {
+                            case .success(let authResults):
+                                switch authResults.credential {
+                                case let appleIDCredential as ASAuthorizationAppleIDCredential:
+                                    guard let nonce = AuthService.shared.currentNonce else { return }
+                                    AuthService.shared.signInWithApple(credential: appleIDCredential, nonce: nonce)
+                                default:
+                                    break
+                                }
+                            case .failure(let error):
+                                print("Apple Sign-In failed: \(error.localizedDescription)")
+                            }
                         }
-                        .bold()
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 55)
-                        .background(.ultraThinMaterial)
-                        .cornerRadius(15)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 15)
-                                .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                        )
-                    }
+                    )
+                    .signInWithAppleButtonStyle(.white)
+                    .frame(height: 55)
+                    .cornerRadius(15)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 15)
+                            .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                    )
                 }
                 .padding(.horizontal, 30)
                 

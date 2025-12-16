@@ -2,8 +2,11 @@ import Foundation
 import SwiftUI
 import FirebaseAuth
 import FirebaseFirestore
+import FirebaseCore
 import Combine
-import GoogleSignIn // 👈 VIKTIGT: Denna måste vara med nu
+import GoogleSignIn
+import AuthenticationServices
+import CryptoKit
 
 class AuthService: ObservableObject {
 
@@ -12,7 +15,9 @@ class AuthService: ObservableObject {
     @Published var userSession: FirebaseAuth.User?
     @Published var currentUserProfile: UserProfile?
     @Published var isLoading: Bool = true
-    @Published var errorMessage: String? // För att kunna visa fel för användaren
+    @Published var errorMessage: String?
+    
+    var currentNonce: String?
     
     private let db = Firestore.firestore()
 
@@ -26,28 +31,22 @@ class AuthService: ObservableObject {
         }
     }
     
-    // MARK: - Google Sign In
     @MainActor
     func signInWithGoogle() {
         isLoading = true
         errorMessage = nil
         
-        // 1. Hitta rätt fönster att visa Google-rutan i
         guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
               let rootViewController = windowScene.windows.first?.rootViewController else {
-            print("Kunde inte hitta rootViewController")
             self.isLoading = false
             return
         }
         
-        // 2. Starta Googles inloggning
         GIDSignIn.sharedInstance.signIn(withPresenting: rootViewController) { [weak self] result, error in
             guard let self = self else { return }
             
             if let error = error {
-                print("Google Sign-In Error: \(error.localizedDescription)")
                 self.isLoading = false
-                // Om användaren avbröt själv (t.ex. klickade kryss) är det inget riktigt fel
                 return
             }
             
@@ -58,86 +57,124 @@ class AuthService: ObservableObject {
             }
             
             let accessToken = user.accessToken.tokenString
+            let credential = GoogleAuthProvider.credential(withIDToken: idToken, accessToken: accessToken)
             
-            // 3. Skapa bevis (Credential) för Firebase
-            let credential = GoogleAuthProvider.credential(withIDToken: idToken,
-                                                           accessToken: accessToken)
-            
-            // 4. Logga in i Firebase med beviset
             Auth.auth().signIn(with: credential) { authResult, error in
                 if let error = error {
-                    print("Firebase Sign-In Error: \(error.localizedDescription)")
-                    self.errorMessage = "Kunde inte logga in med Google."
+                    self.errorMessage = error.localizedDescription
                     self.isLoading = false
                     return
                 }
                 
-                print("✅ Inloggad med Google! UID: \(authResult?.user.uid ?? "")")
                 self.userSession = authResult?.user
-                
-                // Hämta eller skapa profil
                 if let uid = authResult?.user.uid {
                     self.fetchUserProfile(uid: uid)
                 }
             }
         }
     }
-    
-    // (Behåll din gamla mock-funktion om du vill, men den används inte skarpt sen)
-   // func signInMock() {
-   //     isLoading = true
-    //    Auth.auth().signInAnonymously { result, error in
-    //        self.isLoading = false
-    //        if let error = error {
-    //            print("Fel: \(error.localizedDescription)")
-     //           return
-     //       }
-     //       self.userSession = result?.user
-     //       if let uid = result?.user.uid { self.fetchUserProfile(uid: uid) }
-      //  }
-  //  }
-    
-    func saveProfile(username: String, age: Int) {
-        guard let uid = userSession?.uid else { return }
+
+    func signInWithApple(credential: ASAuthorizationAppleIDCredential, nonce: String) {
+        isLoading = true
+        errorMessage = nil
         
-        let profile = UserProfile(username: username, age: age)
-        self.currentUserProfile = profile
+        guard let idTokenData = credential.identityToken,
+              let idTokenString = String(data: idTokenData, encoding: .utf8) else {
+            isLoading = false
+            return
+        }
         
-        do {
-            try db.collection("users").document(uid).setData(from: profile)
-            print("Profil sparad!")
-        } catch {
-            print("Kunde inte spara profil: \(error)")
+        let firebaseCredential = OAuthProvider.credential(
+                   providerID: .apple,
+                   idToken: idTokenString,
+                   rawNonce: nonce,
+                   accessToken: nil
+               )
+        
+        Auth.auth().signIn(with: firebaseCredential) { [weak self] authResult, error in
+            guard let self = self else { return }
+            
+            if let error = error {
+                self.errorMessage = error.localizedDescription
+                self.isLoading = false
+                return
+            }
+            
+            self.userSession = authResult?.user
+            
+            if let fullName = credential.fullName {
+                let formatter = PersonNameComponentsFormatter()
+                let username = formatter.string(from: fullName).isEmpty ? "Explorer" : formatter.string(from: fullName)
+                
+                if let uid = authResult?.user.uid {
+                    self.saveProfile(username: username, age: 0)
+                }
+            } else if let uid = authResult?.user.uid {
+                self.fetchUserProfile(uid: uid)
+            }
         }
     }
     
+    func saveProfile(username: String, age: Int) {
+        guard let uid = userSession?.uid else { return }
+        let profile = UserProfile(username: username, age: age)
+        self.currentUserProfile = profile
+        try? db.collection("users").document(uid).setData(from: profile)
+    }
+    
     func fetchUserProfile(uid: String) {
-        print("📥 Hämtar profil från Firestore...")
         db.collection("users").document(uid).getDocument { snapshot, error in
-            
             DispatchQueue.main.async {
                 self.isLoading = false
-                
                 if let snapshot = snapshot, snapshot.exists {
-                    do {
-                        self.currentUserProfile = try snapshot.data(as: UserProfile.self)
-                        print("Profil hittad: \(self.currentUserProfile?.username ?? "")")
-                    } catch {
-                        print("Kunde inte avkoda profil.")
-                    }
-                } else {
-                    print("Ingen profil hittades i databasen. (Ny användare?)")
-                    // Här skulle vi kunna navigera till ProfileSetupView automatiskt
+                    self.currentUserProfile = try? snapshot.data(as: UserProfile.self)
                 }
             }
         }
     }
     
     func signOut() {
-        GIDSignIn.sharedInstance.signOut() // Logga ut från Google också
+        GIDSignIn.sharedInstance.signOut()
         try? Auth.auth().signOut()
         self.userSession = nil
         self.currentUserProfile = nil
         self.isLoading = false
+    }
+
+    func randomNonceString(length: Int = 32) -> String {
+        precondition(length > 0)
+        let charset: [Character] = Array("0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._")
+        var result = ""
+        var remainingLength = length
+
+        while remainingLength > 0 {
+            let randoms: [UInt8] = (0 ..< 16).map { _ in
+                var random: UInt8 = 0
+                let errorCode = SecRandomCopyBytes(kSecRandomDefault, 1, &random)
+                if errorCode != errSecSuccess {
+                    fatalError("Unable to generate nonce. SecRandomCopyBytes failed with OSStatus \(errorCode)")
+                }
+                return random
+            }
+
+            randoms.forEach { random in
+                if remainingLength == 0 { return }
+                if random < charset.count {
+                    result.append(charset[Int(random)])
+                    remainingLength -= 1
+                }
+            }
+        }
+        return result
+    }
+
+    func sha256(_ input: String) -> String {
+        let inputData = Data(input.utf8)
+        let hashedData = SHA256.hash(data: inputData)
+        let hashString = hashedData.compactMap {
+            return String(format: "%02x", $0)
+        }.joined()
+
+        return hashString
     }
 }
