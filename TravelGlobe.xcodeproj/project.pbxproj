@@ -10,15 +10,30 @@
 		374642BD2EE1E1EC00D28E25 /* AWSS3 in Frameworks */ = {isa = PBXBuildFile; productRef = 374642BC2EE1E1EC00D28E25 /* AWSS3 */; };
 		374642C02EE1E23900D28E25 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 374642BF2EE1E23900D28E25 /* FirebaseAuth */; };
 		374642C22EE1E23900D28E25 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 374642C12EE1E23900D28E25 /* FirebaseFirestore */; };
+		376A8F0A2EF203C600BB339C /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 376A8F092EF203C600BB339C /* GoogleSignIn */; };
+		376A8F0C2EF203C600BB339C /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 376A8F0B2EF203C600BB339C /* GoogleSignInSwift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		374642962EE1D7AF00D28E25 /* TravelGlobe.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TravelGlobe.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		370642022EF1FFED002068CB /* Exceptions for "TravelGlobe" folder in "TravelGlobe" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 374642952EE1D7AF00D28E25 /* TravelGlobe */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		374642982EE1D7AF00D28E25 /* TravelGlobe */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				370642022EF1FFED002068CB /* Exceptions for "TravelGlobe" folder in "TravelGlobe" target */,
+			);
 			path = TravelGlobe;
 			sourceTree = "<group>";
 		};
@@ -29,7 +44,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				376A8F0C2EF203C600BB339C /* GoogleSignInSwift in Frameworks */,
 				374642BD2EE1E1EC00D28E25 /* AWSS3 in Frameworks */,
+				376A8F0A2EF203C600BB339C /* GoogleSignIn in Frameworks */,
 				374642C02EE1E23900D28E25 /* FirebaseAuth in Frameworks */,
 				374642C22EE1E23900D28E25 /* FirebaseFirestore in Frameworks */,
 			);
@@ -77,6 +94,8 @@
 				374642BC2EE1E1EC00D28E25 /* AWSS3 */,
 				374642BF2EE1E23900D28E25 /* FirebaseAuth */,
 				374642C12EE1E23900D28E25 /* FirebaseFirestore */,
+				376A8F092EF203C600BB339C /* GoogleSignIn */,
+				376A8F0B2EF203C600BB339C /* GoogleSignInSwift */,
 			);
 			productName = TravelGlobe;
 			productReference = 374642962EE1D7AF00D28E25 /* TravelGlobe.app */;
@@ -109,6 +128,7 @@
 			packageReferences = (
 				374642BB2EE1E1EC00D28E25 /* XCRemoteSwiftPackageReference "aws-sdk-ios-spm" */,
 				374642BE2EE1E23900D28E25 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				376A8F082EF203C600BB339C /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 374642972EE1D7AF00D28E25 /* Products */;
@@ -269,6 +289,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = TravelGlobe/Info.plist;
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "We need to access your location to locate you on the globe";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Vi behöver tillgång till dina bilder för att du ska kunna lägga till dem i dina reseminnen.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -302,6 +323,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = TravelGlobe/Info.plist;
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "We need to access your location to locate you on the globe";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Vi behöver tillgång till dina bilder för att du ska kunna lägga till dem i dina reseminnen.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -366,6 +388,14 @@
 				minimumVersion = 12.6.0;
 			};
 		};
+		376A8F082EF203C600BB339C /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 9.0.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -383,6 +413,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 374642BE2EE1E23900D28E25 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseFirestore;
+		};
+		376A8F092EF203C600BB339C /* GoogleSignIn */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 376A8F082EF203C600BB339C /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignIn;
+		};
+		376A8F0B2EF203C600BB339C /* GoogleSignInSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 376A8F082EF203C600BB339C /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignInSwift;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

@@ -42,7 +42,7 @@ struct LoginView: View {
                 
                 VStack(spacing: 15) {
                     Button(action: {
-                        AuthService.shared.signInMock()
+                        AuthService.shared.signInWithGoogle()
                     }) {
                         HStack {
                             Image(systemName: "g.circle.fill")
@@ -57,7 +57,7 @@ struct LoginView: View {
                     }
                     
                     Button(action: {
-                        AuthService.shared.signInMock()
+                        AuthService.shared.signInWithGoogle()
                     }) {
                         HStack {
                             Image(systemName: "apple.logo")
